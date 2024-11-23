@@ -1,7 +1,13 @@
-targets = server client
+TARGETS = server client
+DIRECTORY = src/
+FLAGS = -pedantic
 
-build: server.o
-	gcc src/server.o
+
+%.o: %.c
+	gcc $(FLAGS) $< -c
+
+build: server.o test_server.o
+	gcc $(FLAGS) $(DIRECTORY)$^ -o server
 
 clean:
 	rm -f src/*.o src/server src/client
