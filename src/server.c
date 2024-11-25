@@ -79,7 +79,8 @@ char *http_read(http_server_t *server, size_t client_index) {
     return strdup(buffer);
 }
 
-void http_send(http_server_t *server, size_t client_index) {
-    if (client_index > server->amount_of_clients) { return NULL; }
-    //int client_fd = 
+void http_send(http_server_t *server, size_t client_index, char *msg) {
+    int client_fd = *get_client(server, client_index);
+    if (client_index > server->amount_of_clients || !client_fd) { return; }
+
 }

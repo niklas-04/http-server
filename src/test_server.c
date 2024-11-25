@@ -9,5 +9,7 @@ int main() {
     printf("client accepted\n");
     char *str = http_read(server, 0);
     printf("%s", str);
+    http_send(server, 0, "hej tillbaka");
+    printf("sent string");
     close_http_server(server);
 }
