@@ -8,6 +8,10 @@
 #define MAX_CLIENTS 10
 #define MSG_MAX_LEN 1024
 
+enum Methods {
+    GET
+};
+
 typedef struct http_server http_server_t;
 
 struct http_server {
@@ -21,6 +25,14 @@ struct http_server {
 int *get_client(http_server_t *server, size_t index) {
   if (index > server->amount_of_clients) { return NULL; };
   return &server->client_sockets[index];
+}
+
+int check_method(char *msg) {
+    char *method_name;
+    for (int i = 0; msg[i] && msg[i] != ' '; i++) {
+        method_name[i] = msg[i];
+    }
+    for ()
 }
     
 // End of helpers
@@ -82,5 +94,5 @@ char *http_read(http_server_t *server, size_t client_index) {
 void http_send(http_server_t *server, size_t client_index, char *msg) {
     int client_fd = *get_client(server, client_index);
     if (client_index > server->amount_of_clients || !client_fd) { return; }
-
+    if (send(client_fd, msg, strlen(msg), 0) < 0) { perror("send failed"); }
 }
