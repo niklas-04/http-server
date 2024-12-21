@@ -1,18 +1,14 @@
-#include <stdlib.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "server.h"
+#include "http_parser.h"
 
 #define MAX_CLIENTS 10
 #define MSG_MAX_LEN 1024
 
+typedef enum Methods http_method;
+
 enum Methods {
     GET
 };
-
-typedef struct http_server http_server_t;
 
 struct http_server {
   int port;
@@ -22,26 +18,54 @@ struct http_server {
 };
 
 // Helpers
-int *get_client(http_server_t *server, size_t index) {
-  if (index > server->amount_of_clients) { return NULL; };
+static void __exit(char *exit_msg) {
+    perror(exit_msg);
+    abort();
+}
+
+static int *get_client(http_server_t *server, size_t index) {
+  if (index > server->amount_of_clients) { return NULL; }
   return &server->client_sockets[index];
 }
 
-int check_method(char *msg) {
-    char *method_name;
+static void handle_GET(char *msg) {
+    Path document_address = get_path(msg);
+    FILE *document = fopen(document_address, "r");
+    __exit(document);
+}
+
+/* 
+ * Get first word of message
+ * Check if that word is GET
+ */
+static http_method check_method(char *msg) {
+    http_method method = -1;
+    char first_word[MSG_MAX_LEN] = { 0 };
     for (int i = 0; msg[i] && msg[i] != ' '; i++) {
-        method_name[i] = msg[i];
+        first_word[i] = msg[i];
     }
-    for ()
+
+    if (!strcmp(first_word, "GET")) {
+        method = GET;
+    }
+    return method;
+}
+
+static void handle_method(char *msg) {
+    http_method method = check_method(msg);
+    switch (method) {
+        case GET: handle_GET(msg); break;
+        default: printf("Could not find method\n");
+    }
 }
     
 // End of helpers
 
 http_server_t *create_http_server(int port) {
   http_server_t *server = calloc(1, sizeof(http_server_t));
-  if ((server->port = port) < 0) { perror("invalid port"); }
+  if ((server->port = port) < 0) { __exit("invalid port"); }
   // Sets up a socket that uses IPv4, using TCP
-  if ((server->socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) { perror("socket failed"); }
+  if ((server->socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) { __exit("socket failed"); }
   //server->client_sockets = calloc(MAX_CLIENTS, sizeof(int)); // Each client is represented as a pid (int)
   server->amount_of_clients = 0;
 }
@@ -67,12 +91,10 @@ void http_accept_new_client(http_server_t *server) {
     socklen_t addrlen = sizeof(address);
 
     // Binds the server socket to the socket address
-    if (bind(server->socket, (struct sockaddr*) &address, sizeof(address)) < 0) {
-        perror("bind failed");
-    }
+    if (bind(server->socket, (struct sockaddr*) &address, sizeof(address)) < 0) { __exit("bind failed"); }
     // Listen and accept incoming requests, with a maximum queue of 5
-    if (listen(server->socket, 5) < 0) { perror("listen failed"); };
-    if ((*current_slot = accept(server->socket, (struct sockaddr*) &address, &addrlen)) < 0) { perror("accept failed"); };
+    if (listen(server->socket, 5) < 0) { __exit("listen failed"); }
+    if ((*current_slot = accept(server->socket, (struct sockaddr*) &address, &addrlen)) < 0) { __exit("accept failed"); }
     server->amount_of_clients++;
 }
 
@@ -86,7 +108,9 @@ char *http_read(http_server_t *server, size_t client_index) {
     ssize_t bytes_read = read(client_fd, buffer, MSG_MAX_LEN - 1); // one byte reserved for null termination
     buffer[MSG_MAX_LEN] = '\0';
 
-    if (bytes_read < 0) { perror("read failed"); }
+    if (bytes_read < 0) { __exit("read failed"); }
+
+    handle_method(buffer);
 
     return strdup(buffer);
 }
@@ -94,5 +118,5 @@ char *http_read(http_server_t *server, size_t client_index) {
 void http_send(http_server_t *server, size_t client_index, char *msg) {
     int client_fd = *get_client(server, client_index);
     if (client_index > server->amount_of_clients || !client_fd) { return; }
-    if (send(client_fd, msg, strlen(msg), 0) < 0) { perror("send failed"); }
+    if (send(client_fd, msg, strlen(msg), 0) < 0) { __exit("send failed"); }
 }
