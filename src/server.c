@@ -12,7 +12,7 @@ enum Methods {
 
 struct http_server {
   int port;
-  int socket;          // A fd to the socket
+  int socket;                      // A fd to the socket
   int client_sockets[MAX_CLIENTS]; // Each client will have their own socket connection when accepting
   size_t amount_of_clients;
 };
@@ -31,7 +31,16 @@ static int *get_client(http_server_t *server, size_t index) {
 static void handle_GET(char *msg) {
     Path document_address = get_path(msg);
     FILE *document = fopen(document_address, "r");
-    __exit(document);
+
+    if (document == NULL) { __exit("handle_GET"); }
+
+    char buffer[MSG_MAX_LEN] = { 0 };
+    char c;
+    for (int i = 0; i < MSG_MAX_LEN && (c = fgetc(document)) != EOF; i++) {
+        buffer[i] = c;
+    }
+    
+    fclose(document);
 }
 
 /* 
@@ -58,7 +67,6 @@ static void handle_method(char *msg) {
         default: printf("Could not find method\n");
     }
 }
-    
 // End of helpers
 
 http_server_t *create_http_server(int port) {
