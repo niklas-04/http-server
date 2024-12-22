@@ -32,6 +32,8 @@ static int *get_client(http_server_t *server, size_t index) {
 static void handle_GET(http_server_t *server, size_t client_index, char *msg) {
     Path document_address = get_path(msg);
     FILE *document = fopen(document_address, "r");
+    printf("\n%s\n", document_address);
+    free(document_address);
 
     if (document == NULL) { __exit("handle_GET"); }
 
@@ -113,8 +115,6 @@ char *http_read(http_server_t *server, size_t client_index) {
     int client_fd = *get_client(server, client_index);
     char buffer[MSG_MAX_LEN] = { 0 };
 
-    // TODO: add checks for if server is setup
-    // ssize_t allows for -1, indicating failure
     ssize_t bytes_read = read(client_fd, buffer, MSG_MAX_LEN - 1); // one byte reserved for null termination
     buffer[MSG_MAX_LEN] = '\0';
 
@@ -130,10 +130,3 @@ void http_send(http_server_t *server, size_t client_index, char *msg) {
     if (client_index > server->amount_of_clients || !client_fd) { return; }
     if (send(client_fd, msg, strlen(msg), 0) < 0) { __exit("send failed"); }
 }
-
- //int main(void) {
- //   Path p = "GET /home/niklas/Projekt/http_server/src/hello.txt";
- //   //handle_GET(p);
- //   p = "GET /home/niklas/Projekt/http_server/src/hello.html";
- //   //handle_GET(p);
- //}
