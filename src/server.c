@@ -7,12 +7,13 @@
 typedef enum Methods http_method;
 
 enum Methods {
+    NONE,
     GET
 };
 
 struct http_server {
   int port;
-  int socket;          // A fd to the socket
+  int socket;                      // A fd to the socket
   int client_sockets[MAX_CLIENTS]; // Each client will have their own socket connection when accepting
   size_t amount_of_clients;
 };
@@ -28,10 +29,20 @@ static int *get_client(http_server_t *server, size_t index) {
   return &server->client_sockets[index];
 }
 
-static void handle_GET(char *msg) {
+static void handle_GET(http_server_t *server, size_t client_index, char *msg) {
     Path document_address = get_path(msg);
     FILE *document = fopen(document_address, "r");
-    __exit(document);
+
+    if (document == NULL) { __exit("handle_GET"); }
+
+    char buffer[MSG_MAX_LEN] = { 0 };
+    char c;
+    for (int i = 0; i < MSG_MAX_LEN && (c = fgetc(document)) != EOF; i++) {
+        buffer[i] = c;
+    }
+
+    http_send(server, client_index, buffer);
+    fclose(document);
 }
 
 /* 
@@ -39,7 +50,7 @@ static void handle_GET(char *msg) {
  * Check if that word is GET
  */
 static http_method check_method(char *msg) {
-    http_method method = -1;
+    http_method method = NONE;
     char first_word[MSG_MAX_LEN] = { 0 };
     for (int i = 0; msg[i] && msg[i] != ' '; i++) {
         first_word[i] = msg[i];
@@ -51,14 +62,13 @@ static http_method check_method(char *msg) {
     return method;
 }
 
-static void handle_method(char *msg) {
+static void handle_method(http_server_t *server, size_t client_index, char *msg) {
     http_method method = check_method(msg);
     switch (method) {
-        case GET: handle_GET(msg); break;
-        default: printf("Could not find method\n");
+        case NONE: printf("Not a valid request"); break;
+        case GET: handle_GET(server, client_index, msg); break;
     }
 }
-    
 // End of helpers
 
 http_server_t *create_http_server(int port) {
@@ -110,7 +120,7 @@ char *http_read(http_server_t *server, size_t client_index) {
 
     if (bytes_read < 0) { __exit("read failed"); }
 
-    handle_method(buffer);
+    handle_method(server, client_index, buffer);
 
     return strdup(buffer);
 }
@@ -120,3 +130,10 @@ void http_send(http_server_t *server, size_t client_index, char *msg) {
     if (client_index > server->amount_of_clients || !client_fd) { return; }
     if (send(client_fd, msg, strlen(msg), 0) < 0) { __exit("send failed"); }
 }
+
+ //int main(void) {
+ //   Path p = "GET /home/niklas/Projekt/http_server/src/hello.txt";
+ //   //handle_GET(p);
+ //   p = "GET /home/niklas/Projekt/http_server/src/hello.html";
+ //   //handle_GET(p);
+ //}

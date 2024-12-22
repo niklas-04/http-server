@@ -1,15 +1,21 @@
 TARGETS = server client
-DIRECTORY = src/
+SRCDIR = src
+OUTDIR = build
 FLAGS = -pedantic
 
+$(OUTDIR)/%.o: $(SRCDIR)/%.c | build_dir
+	gcc $(FLAGS) -c $< -o $@
 
-%.o: %.c
-	gcc $(FLAGS) $< -c
+build: $(OUTDIR)/server
 
-build: server.o test_server.o
-	gcc $(FLAGS) $(DIRECTORY)$^ -o server
+build_dir:
+	mkdir $(OUTDIR)
+
+$(OUTDIR)/server:  $(OUTDIR)/server.o $(OUTDIR)/test_server.o $(OUTDIR)/http_parser.o
+	gcc $(FLAGS) $^ -o $@
 
 clean:
-	rm -f src/*.o src/server src/client
+	rm -f  $(OUTDIR)/server $(OUTDIR)/client $(OUTDIR)/*.o
+	rmdir $(OUTDIR)
 
 .PHONY: build clean
