@@ -9,7 +9,7 @@ $(OUTDIR)/%.o: $(SRCDIR)/%.c | build_dir
 build: $(OUTDIR)/server
 
 build_dir:
-	mkdir $(OUTDIR)
+	mkdir -p $(OUTDIR)
 
 $(OUTDIR)/server:  $(OUTDIR)/server.o $(OUTDIR)/test_server.o $(OUTDIR)/http_parser.o
 	gcc $(FLAGS) $^ -o $@
