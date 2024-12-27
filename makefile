@@ -3,13 +3,16 @@ SRCDIR = src
 OUTDIR = build
 FLAGS = -pedantic
 
-$(OUTDIR)/%.o: $(SRCDIR)/%.c | build_dir
-	gcc $(FLAGS) -c $< -o $@
+run: build
+	$(OUTDIR)/server
 
 build: $(OUTDIR)/server
 
 build_dir:
 	mkdir -p $(OUTDIR)
+
+$(OUTDIR)/%.o: $(SRCDIR)/%.c | build_dir
+	gcc $(FLAGS) -c $< -o $@
 
 $(OUTDIR)/server:  $(OUTDIR)/server.o $(OUTDIR)/test_server.o $(OUTDIR)/http_parser.o
 	gcc $(FLAGS) $^ -o $@
