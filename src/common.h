@@ -19,6 +19,11 @@ enum Version {
 };
 typedef enum Version version_t;
 
+enum Status {
+    NO_STATUS
+};
+typedef enum Status http_status;
+
 struct request {
     version_t version;
     Path path;
@@ -26,8 +31,8 @@ struct request {
 };
 
 struct http_response {
-    size_t status;
-    version_t version;
+    http_status status;
+    version_t version; // maybe not needed?
     char *type;
     void *content;
 };

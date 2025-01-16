@@ -4,10 +4,6 @@
 #include <string.h>
 #define MSG_MAX_LEN 1024
 
-http_response_t create_http_response() {
-    http_response_t *response = calloc(1, sizeof(http_response_t));
-}
-
 char *get_word_at_index(char *str, size_t index) {
     int word = 0;
     char buffer[1024] = { 0 };

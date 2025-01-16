@@ -1,5 +1,6 @@
 #include "server.h"
 #include "http_parser.h"
+#include "response.h"
 #include "common.h"
 
 #define MAX_CLIENTS 10
@@ -21,6 +22,10 @@ static void __exit(char *exit_msg) {
     abort();
 }
 
+static char *buid_response(http_response_t *response) {
+    char response_buffer[MSG_MAX_LEN] = { 0 };
+}
+
 static int *get_client(http_server_t *server, size_t index) {
   if (index > server->amount_of_clients) { return NULL; }
   return &server->client_sockets[index];
@@ -39,11 +44,18 @@ static void handle_GET(http_server_t *server, size_t client_index, http_request 
         buffer[i] = c;
     }
 
-    http_send(server, client_index, buffer);
+    http_response_t *response = create_http_response();
+    response->content = buffer;
+    char *response_string = response_tostring(response);
+    http_send(server, client_index, response_string);
+
+    free(response_string);
     fclose(document);
 }
 
 static void handle_method(http_server_t *server, size_t client_index, http_request *request) {
+    http_response_t *response = create_http_response();
+    response->version = request->version;
     switch (request->method) {
         case NONE: printf("Not a valid request"); break;
         case GET: handle_GET(server, client_index, request); break;
