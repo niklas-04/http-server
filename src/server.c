@@ -1,15 +1,13 @@
 #include "server.h"
 #include "http_parser.h"
+#include "response.h"
+#include "common.h"
 
 #define MAX_CLIENTS 10
 #define MSG_MAX_LEN 1024
 
 typedef enum Methods http_method;
 
-enum Methods {
-    NONE,
-    GET
-};
 
 struct http_server {
   int port;
@@ -24,15 +22,18 @@ static void __exit(char *exit_msg) {
     abort();
 }
 
+static char *buid_response(http_response_t *response) {
+    char response_buffer[MSG_MAX_LEN] = { 0 };
+}
+
 static int *get_client(http_server_t *server, size_t index) {
   if (index > server->amount_of_clients) { return NULL; }
   return &server->client_sockets[index];
 }
 
-static void handle_GET(http_server_t *server, size_t client_index, char *msg) {
-    Path document_address = get_path(msg);
+static void handle_GET(http_server_t *server, size_t client_index, http_request *request) {
+    Path document_address = request->path;
     FILE *document = fopen(document_address, "r");
-    printf("\n%s\n", document_address);
     free(document_address);
 
     if (document == NULL) { __exit("handle_GET"); }
@@ -43,32 +44,21 @@ static void handle_GET(http_server_t *server, size_t client_index, char *msg) {
         buffer[i] = c;
     }
 
-    http_send(server, client_index, buffer);
+    http_response_t *response = create_http_response();
+    response->content = buffer;
+    char *response_string = response_tostring(response);
+    http_send(server, client_index, response_string);
+
+    free(response_string);
     fclose(document);
 }
 
-/* 
- * Get first word of message
- * Check if that word is GET
- */
-static http_method check_method(char *msg) {
-    http_method method = NONE;
-    char first_word[MSG_MAX_LEN] = { 0 };
-    for (int i = 0; msg[i] && msg[i] != ' '; i++) {
-        first_word[i] = msg[i];
-    }
-
-    if (!strcmp(first_word, "GET")) {
-        method = GET;
-    }
-    return method;
-}
-
-static void handle_method(http_server_t *server, size_t client_index, char *msg) {
-    http_method method = check_method(msg);
-    switch (method) {
+static void handle_method(http_server_t *server, size_t client_index, http_request *request) {
+    http_response_t *response = create_http_response();
+    response->version = request->version;
+    switch (request->method) {
         case NONE: printf("Not a valid request"); break;
-        case GET: handle_GET(server, client_index, msg); break;
+        case GET: handle_GET(server, client_index, request); break;
     }
 }
 // End of helpers
@@ -120,7 +110,8 @@ char *http_read(http_server_t *server, size_t client_index) {
 
     if (bytes_read < 0) { __exit("read failed"); }
 
-    handle_method(server, client_index, buffer);
+    http_request *request = parse_request(buffer);
+    handle_method(server, client_index, request);
 
     return strdup(buffer);
 }
