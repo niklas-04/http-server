@@ -44,11 +44,15 @@ Path get_path(char *request) {
     return get_word_at_index(request, 1);
 }
 
-size_t get_version(char *request) {
-    char *version = get_word_at_index(request, 2);
-    if (!version) {
-        return NO_VERSION;
-    }
+char *get_version(char *request) {
+    return get_word_at_index(request, 2);
+}
+
+char *get_response_type(char *request) {
+    Path path = get_path(request);
+    // TODO: implement
+
+    free(path);
 }
 
 http_request *parse_request(char *request_str) {
@@ -58,4 +62,3 @@ http_request *parse_request(char *request_str) {
     request->version = get_version(request_str);
     return request;
 }
-

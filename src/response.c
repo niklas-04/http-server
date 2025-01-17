@@ -11,16 +11,18 @@ char *response_tostring(http_response_t *response) {
     char response_buffer[1024] = { 0 };
     char temp_buffer[256] = { 0 };
 
-    int current_len = snprintf(temp_buffer, 256, "Status Code: %d\n", response->status);
+    char *status_message = response->status < 400 ? "OK" : "Not Found";
+    int current_len = snprintf(temp_buffer, 256, "%s %d %s\n", response->version, response->status, status_message);
     strcat(response_buffer, temp_buffer);
 
-    current_len += snprintf(temp_buffer, 256, "Status Message: OK\n", response->status);
+    //current_len += snprintf(temp_buffer, 256, "Content-Type: %s\n", response->type);
+    current_len += snprintf(temp_buffer, 256, "Content-Type: text/html\n");
     strcat(response_buffer, temp_buffer);
 
-    current_len += snprintf(temp_buffer, 256, "Headers: %s\n", response->type);
+    current_len += snprintf(temp_buffer, 256, "Content-Length: %d\n\n", response->content_length);
     strcat(response_buffer, temp_buffer);
 
-    current_len += snprintf(temp_buffer, 256, "Content: %s\n", response->content);
+    current_len += snprintf(temp_buffer, 256, "%s", (char *) response->content);
     strcat(response_buffer, temp_buffer);
     
 

@@ -12,27 +12,23 @@ enum Methods {
 };
 typedef enum Methods http_method;
 
-enum Version {
-    NO_VERSION,
-    V0_9,
-    V1_0
-};
-typedef enum Version version_t;
 
 enum Status {
-    NO_STATUS
+    NO_STATUS,
+    STATUS_404 = 404
 };
 typedef enum Status http_status;
 
 struct request {
-    version_t version;
+    char *version;
     Path path;
     http_method method;
 };
 
 struct http_response {
     http_status status;
-    version_t version; // maybe not needed?
+    char *version; // maybe not needed?
     char *type;
+    size_t content_length;
     void *content;
 };

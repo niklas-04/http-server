@@ -14,6 +14,7 @@ struct http_server {
   int socket;                      // A fd to the socket
   int client_sockets[MAX_CLIENTS]; // Each client will have their own socket connection when accepting
   size_t amount_of_clients;
+  bool bound;
 };
 
 // Helpers
@@ -22,34 +23,30 @@ static void __exit(char *exit_msg) {
     abort();
 }
 
-static char *buid_response(http_response_t *response) {
-    char response_buffer[MSG_MAX_LEN] = { 0 };
-}
-
 static int *get_client(http_server_t *server, size_t index) {
   if (index > server->amount_of_clients) { return NULL; }
   return &server->client_sockets[index];
 }
 
-static void handle_GET(http_server_t *server, size_t client_index, http_request *request) {
+static void handle_GET(http_request *request, http_response_t *response) {
     Path document_address = request->path;
     FILE *document = fopen(document_address, "r");
     free(document_address);
 
-    if (document == NULL) { __exit("handle_GET"); }
+    if (document == NULL) {
+        response->status = STATUS_404;
+        return;
+    }
 
     char buffer[MSG_MAX_LEN] = { 0 };
     char c;
     for (int i = 0; i < MSG_MAX_LEN && (c = fgetc(document)) != EOF; i++) {
         buffer[i] = c;
+        response->content_length++;
     }
 
-    http_response_t *response = create_http_response();
-    response->content = buffer;
-    char *response_string = response_tostring(response);
-    http_send(server, client_index, response_string);
-
-    free(response_string);
+    response->status = 200;
+    response->content = strdup(buffer);
     fclose(document);
 }
 
@@ -58,8 +55,12 @@ static void handle_method(http_server_t *server, size_t client_index, http_reque
     response->version = request->version;
     switch (request->method) {
         case NONE: printf("Not a valid request"); break;
-        case GET: handle_GET(server, client_index, request); break;
+        case GET: handle_GET(request, response); break;
     }
+
+    char *response_string = response_tostring(response);
+    http_send(server, client_index, response_string);
+    free(response_string);
 }
 // End of helpers
 
@@ -68,7 +69,6 @@ http_server_t *create_http_server(int port) {
   if ((server->port = port) < 0) { __exit("invalid port"); }
   // Sets up a socket that uses IPv4, using TCP
   if ((server->socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) { __exit("socket failed"); }
-  //server->client_sockets = calloc(MAX_CLIENTS, sizeof(int)); // Each client is represented as a pid (int)
   server->amount_of_clients = 0;
 }
 
@@ -93,7 +93,9 @@ void http_accept_new_client(http_server_t *server) {
     socklen_t addrlen = sizeof(address);
 
     // Binds the server socket to the socket address
-    if (bind(server->socket, (struct sockaddr*) &address, sizeof(address)) < 0) { __exit("bind failed"); }
+    if (!server-> bound && bind(server->socket, (struct sockaddr*) &address, sizeof(address)) < 0) { __exit("bind failed"); }
+    server->bound = true;
+
     // Listen and accept incoming requests, with a maximum queue of 5
     if (listen(server->socket, 5) < 0) { __exit("listen failed"); }
     if ((*current_slot = accept(server->socket, (struct sockaddr*) &address, &addrlen)) < 0) { __exit("accept failed"); }
