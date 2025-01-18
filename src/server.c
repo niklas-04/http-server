@@ -1,5 +1,5 @@
 #include "server.h"
-#include "http_parser.h"
+#include "request.h"
 #include "response.h"
 #include "common.h"
 
@@ -45,9 +45,16 @@ static void handle_GET(http_request *request, http_response_t *response) {
         response->content_length++;
     }
 
-    response->status = 200;
+    response->status = STATUS_200;
     response->content = strdup(buffer);
     fclose(document);
+}
+
+static void respond_to_request(http_server_t *server, size_t client_index, http_response_t *response) {
+    char *response_string = response_tostring(response);
+    http_send(server, client_index, response_string);
+    free(response_string);
+    destroy_response(response);
 }
 
 static void handle_method(http_server_t *server, size_t client_index, http_request *request) {
@@ -57,10 +64,7 @@ static void handle_method(http_server_t *server, size_t client_index, http_reque
         case NONE: printf("Not a valid request"); break;
         case GET: handle_GET(request, response); break;
     }
-
-    char *response_string = response_tostring(response);
-    http_send(server, client_index, response_string);
-    free(response_string);
+    respond_to_request(server, client_index, response);
 }
 // End of helpers
 
@@ -73,14 +77,27 @@ http_server_t *create_http_server(int port) {
 }
 
 void close_http_server(http_server_t *server) {
-    for (int i = 0; i < server->amount_of_clients; i++) {
-        int current_client_socketfd = server->client_sockets[i];
-        close(current_client_socketfd);
-    }
-
+    http_close_all_connections(server);
     close(server->socket);
     free(server);
 }
+
+void http_close_all_connections(http_server_t *server) {
+    size_t amount_of_clients = server->amount_of_clients;
+    for (int i = 0; i < server->amount_of_clients; i++) {
+        http_close_connection_to_client(server, i);
+    }
+}
+
+void http_close_connection_to_client(http_server_t *server, size_t index) {
+        int current_client_socketfd = server->client_sockets[index];
+        if (!current_client_socketfd) {
+            return;
+        }
+        server->amount_of_clients--;
+        close(current_client_socketfd);
+}
+
 
 void http_accept_new_client(http_server_t *server) {
     // TODO: add check to see if server is full
@@ -114,10 +131,12 @@ char *http_read(http_server_t *server, size_t client_index) {
 
     http_request *request = parse_request(buffer);
     handle_method(server, client_index, request);
+    free(request);
 
     return strdup(buffer);
 }
 
+// Allows the sending and building of manual responses
 void http_send(http_server_t *server, size_t client_index, char *msg) {
     int client_fd = *get_client(server, client_index);
     if (client_index > server->amount_of_clients || !client_fd) { return; }

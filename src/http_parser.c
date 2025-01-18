@@ -6,12 +6,13 @@
 
 char *get_word_at_index(char *str, size_t index) {
     int word = 0;
-    char buffer[1024] = { 0 };
+    char buffer[MSG_MAX_LEN] = { 0 };
     int j = 0;
    for (int i = 0; i < 1024 && *(str + i) && word < index + 1; i++) {
-        if (*(str + i) == ' ') {
+        char current_char = *(str + i);
+        if (current_char == ' ' || current_char == '\r') {
             word++;
-        } else if (word == index) {
+        } else if (current_char != '\n' && word == index) {
             buffer[j] = *(str + i);
             j++;
         }
@@ -20,9 +21,7 @@ char *get_word_at_index(char *str, size_t index) {
     if (word <= index) {
         return NULL;
     }
-
     return strdup(buffer);
-
 }
 
 http_method check_method(char *msg) {
@@ -53,12 +52,4 @@ char *get_response_type(char *request) {
     // TODO: implement
 
     free(path);
-}
-
-http_request *parse_request(char *request_str) {
-    http_request *request = calloc(1, sizeof(http_request));
-    request->path = get_path(request_str);
-    request->method = check_method(request_str);
-    request->version = get_version(request_str);
-    return request;
 }

@@ -15,6 +15,7 @@ typedef enum Methods http_method;
 
 enum Status {
     NO_STATUS,
+    STATUS_200 = 200,
     STATUS_404 = 404
 };
 typedef enum Status http_status;

@@ -1,5 +1,6 @@
 #include "common.h"
 #include "response.h"
+#define HEADER_BYTES 1024
 
 http_response_t *create_http_response() {
     http_response_t *response = calloc(1, sizeof(http_response_t));
@@ -8,23 +9,32 @@ http_response_t *create_http_response() {
 
 // TODO: remove hardcoded strings
 char *response_tostring(http_response_t *response) {
-    char response_buffer[1024] = { 0 };
-    char temp_buffer[256] = { 0 };
+    size_t buff_len = response->content_length + HEADER_BYTES;
+    char *response_buffer = calloc(1, buff_len * sizeof(char));
 
     char *status_message = response->status < 400 ? "OK" : "Not Found";
-    int current_len = snprintf(temp_buffer, 256, "%s %d %s\n", response->version, response->status, status_message);
-    strcat(response_buffer, temp_buffer);
+    int current_len = snprintf(response_buffer, buff_len, "%s %d %s\n", response->version, response->status, status_message);
 
-    //current_len += snprintf(temp_buffer, 256, "Content-Type: %s\n", response->type);
-    current_len += snprintf(temp_buffer, 256, "Content-Type: text/html\n");
-    strcat(response_buffer, temp_buffer);
+    //current_len += snprintf(response_buffer, buff_len, "Content-Type: %s\n", response->type);
+    current_len += snprintf(response_buffer + current_len, buff_len, "Content-Type: text/html\n");
 
-    current_len += snprintf(temp_buffer, 256, "Content-Length: %d\n\n", response->content_length);
-    strcat(response_buffer, temp_buffer);
+    current_len += snprintf(response_buffer + current_len, buff_len, "Content-Length %d\n\n", response->content_length);
 
-    current_len += snprintf(temp_buffer, 256, "%s", (char *) response->content);
-    strcat(response_buffer, temp_buffer);
-    
+    current_len += snprintf(response_buffer + current_len, buff_len,"%s", response->content);
 
-    return strdup(response_buffer);
+    return response_buffer;
+}
+
+void destroy_response(http_response_t *response) {
+    if (response->version) {
+        free(response->version);
+    }
+    if (response->type) {
+        free(response->type);
+    }
+    if (response->content) {
+        free(response->content);
+    }
+
+    free(response);
 }
